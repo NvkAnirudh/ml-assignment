@@ -2,52 +2,41 @@
 
 ## 1. Data Observations
 
-**Dataset:** 10,000 employees with 9 features and 1 target variable. No missing values.
+The dataset contains 10,000 employees with 9 features and a binary target indicating whether each person enrolled in the voluntary insurance product. There are no missing values, and the target distribution is slightly imbalanced: 61.7% of employees enroll (6,174 people), while 38.3% do not (3,826 people). This imbalance is noticeable but mild enough that it can be handled with class weights rather than aggressive resampling.
 
-**Target Distribution:**
-- Enrolled: 61.7% (6,174)
-- Not Enrolled: 38.3% (3,826)
+When we look at which groups actually enroll, a clear story emerges:
 
-Slight class imbalance, but manageable without aggressive resampling.
+- Employees **with dependents** are far more likely to enroll than those without. Roughly 8 out of 10 employees with dependents enroll, compared with about 3 to 4 out of 10 employees without dependents.
+- **Employment type** also matters. Most full-time employees choose to enroll (about three quarters of them), whereas enrollment among part-time and contract workers is closer to one in three.
+- **Salary** and **age** provide additional, but secondary, signals. Enrolled employees tend to earn more (around \$69k on average versus \$58k for those who do not enroll) and are somewhat older (mid 40s compared with late 30s).
+- **Tenure** and **region** do not show meaningful differences. Employees across regions enroll at very similar rates, and years at the company is not a strong differentiator once other factors are taken into account.
 
-**What drives enrollment?**
-
-| Feature | Finding |
-|---------|---------|
-| **Dependents** | Strongest signal. 79.7% with dependents enroll vs 34.8% without |
-| **Employment Type** | Full-time: 75.3% enroll. Part-time/Contract: ~30% |
-| **Salary** | Higher earners enroll more (avg $69k vs $58k for non-enrolled) |
-| **Age** | Older employees enroll more (avg 45.6 vs 38.8 years) |
-| **Tenure** | No meaningful correlation with enrollment |
-| **Region** | All regions ~61-63% — not predictive |
-
-**Bottom line:** Employees with dependents and full-time status are the primary enrollers. Salary and age provide secondary signals. Region and tenure don't matter much.
+Put simply, the employees most likely to enroll are full time workers with dependents, typically older and better paid. Where they live and how long they have been at the company adds little predictive value.
 
 ## 2. Data Preprocessing
 
-| Step | What | Why |
-|------|------|-----|
-| Drop `employee_id` | Removed | Not predictive |
-| Binary encode | `has_dependents` → 0/1 | Already binary |
-| One-hot encode | `gender`, `marital_status`, `employment_type`, `region` | No ordinal relationship between categories |
-| Drop first category | Female, Divorced, Contract, Midwest | Avoid multicollinearity; these become reference categories |
-| Scale numericals | StandardScaler on `age`, `salary`, `tenure_years` | Handles outliers better than MinMaxScaler |
-| Train/test split | 80/20, stratified | Preserves class ratio in both sets |
-| Class imbalance | Using `class_weight='balanced'` in models | Mild imbalance (62:38) doesn't need SMOTE |
+The preprocessing pipeline is intentionally simple and mirrors how this data would be prepared in production.
 
-**Final feature count:** 14 (3 numerical + 10 one-hot encoded + 1 binary)
+- **Identifier removal:** The `employee_id` column is dropped because it is only an identifier and carries no information about enrollment.
+- **Target and features:** The `enrolled` column is kept as the target, and all remaining columns are treated as input features.
+- **Binary encoding:** The `has_dependents` column is converted from `"Yes"/"No"` to 1/0. This keeps the meaning clear while making it directly usable by the models.
+- **Categorical encoding:** Categorical features (`gender`, `marital_status`, `employment_type`, `region`) are one hot encoded with one category dropped per feature. The dropped categories act as reference groups and prevent redundant columns.
+- **Numeric scaling:** Continuous variables (`age`, `salary`, `tenure_years`) are standardized so that models see them on comparable scales. This helps algorithms that are sensitive to feature magnitude and makes optimization more stable.
+- **Train/test split and imbalance handling:** The data is split into an 80/20 train–test split, stratified on the target to preserve the original class ratio. Because the imbalance is modest (about 62:38), models use `class_weight='balanced'` instead of synthetic oversampling.
+
+After preprocessing, the model works with 14 features: 3 scaled numerical features, 10 one hot encoded categorical features, and 1 binary indicator for dependents.
 
 ## 3. Model Choices & Rationale
 
-| Model | Why Included |
-|-------|--------------|
-| **Logistic Regression** | Interpretable baseline; shows feature coefficients |
-| **Decision Tree** | Simple, explainable; captures non-linear thresholds |
-| **Random Forest** | Robust ensemble (bagging); reduces variance |
-| **XGBoost** | Boosting ensemble; often best for tabular data |
-| **SVM** | Margin-based approach; different algorithm family |
+Several complementary models were trained to understand both performance and behavior:
 
-All models used `class_weight='balanced'` to handle the mild 62:38 class imbalance.
+- **Logistic Regression** serves as a strong, interpretable baseline. Its coefficients make it easy to see which features increase or decrease the likelihood of enrollment.
+- A **Decision Tree** captures simple, human readable rules such as “full time with dependents” versus “part time with no dependents,” and exposes clear thresholds.
+- A **Random Forest** combines many decision trees to reduce variance and usually produces more stable predictions than any single tree.
+- **XGBoost**, a boosted tree ensemble, is included because it typically performs extremely well on tabular, structured data like this.
+- An **SVM** offers a different perspective, using margins and decision boundaries rather than tree‑based rules, and provides a useful comparison across algorithm families.
+
+All models are configured with `class_weight='balanced'` to counter the moderate class imbalance without changing the underlying data.
 
 ## 4. Evaluation Results
 
@@ -79,16 +68,16 @@ Four features drive nearly 100% of predictions. Gender, marital status, region, 
 
 ## 5. Key Takeaways
 
-1. **Dependents + Employment type are the primary drivers** — employees with dependents in full-time roles almost always enroll
-2. **Tree-based models achieve perfect accuracy** — the data has clear, learnable decision boundaries
-3. **Logistic Regression underperforms** — can't capture the non-linear threshold effects (age plateau at 30, salary jump at 60k)
-4. **Some features are useless** — gender, region, marital status, tenure add no predictive value
+1. **Dependents + Employment type are the primary drivers.** Employees with dependents in full-time roles almost always enroll.
+2. **Tree-based models achieve perfect accuracy.** The data has clear, learnable decision boundaries.
+3. **Logistic Regression underperforms.** It cannot capture the non-linear threshold effects (age plateau at 30, salary jump at 60k).
+4. **Some features are useless.** Gender, region, marital status, and tenure add no predictive value.
 
 ## 6. Next Steps
 
-- **Model explainability** — SHAP values for individual prediction explanations
-- **Real-world validation** — test on actual (non-synthetic) data with more noise
-- **Monitoring** — track model drift and prediction distributions over time
+- **Model explainability:** use SHAP values to explain individual predictions.
+- **Real-world validation:** test the approach on actual (non-synthetic) data with more noise.
+- **Monitoring:** track model drift and prediction distributions over time.
 
 ---
 
@@ -114,25 +103,24 @@ Used `RandomizedSearchCV` with 5-fold stratified CV to find optimal parameters.
 | XGBoost | 0.9995 | 0.9996 | 1.0000 |
 | SVM | 0.9855 | 0.9883 | 0.9988 |
 
-**Observation:** Tuning improved SVM significantly (F1: 0.975 → 0.988). Tree models were already near-perfect.
+**Observation:** Tuning improved SVM significantly (F1: 0.975 to 0.988). Tree models were already near-perfect.
 
 ## 8. Experiment Tracking (MLflow)
 
 Used MLflow to log experiments for reproducibility and comparison.
 
-**What's tracked:**
+For each experiment, MLflow records:
 
-| Item | Description |
-|------|-------------|
-| Parameters | All model hyperparameters |
-| Metrics | accuracy, precision, recall, f1, roc_auc |
-| Artifacts | Confusion matrix plots, ROC curves, trained models |
-| Models | Serialized sklearn models for deployment |
+- **Parameters**: all relevant hyperparameters for each model, so that any run can be exactly reproduced.
+- **Metrics**: standard classification metrics, including accuracy, precision, recall, F1, and ROC-AUC, logged for easy comparison across runs.
+- **Artifacts**: confusion matrix images, ROC curves, and any other diagnostic plots generated during evaluation.
+- **Models**: serialized versions of the trained models suitable for later deployment or further analysis.
 
-**Saved artifacts:**
-- `models/best_model.pkl` — Best performing model (Random Forest)
-- `models/preprocessor.pkl` — Fitted preprocessor for inference
-- `mlruns/` — MLflow experiment logs
+The following artifacts are stored for day to day use:
+
+- `models/best_model.pkl`: the best performing model (a Random Forest in this case).
+- `models/preprocessor.pkl`: the fitted preprocessing pipeline, needed to transform new data at inference time.
+- `mlruns/`: the complete MLflow experiment logs, which can be explored using the MLflow UI.
 
 **View experiments:** Run `mlflow ui` in project directory to launch dashboard.
 
@@ -140,14 +128,12 @@ Used MLflow to log experiments for reproducibility and comparison.
 
 Built a REST API for real-time predictions.
 
-**Endpoints:**
+The FastAPI service exposes a small set of endpoints:
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Health check |
-| `/model/info` | GET | Model metadata |
-| `/predict` | POST | Single prediction |
-| `/predict/batch` | POST | Batch predictions |
+- `GET /` provides a simple health check and indicates whether the model has been loaded.
+- `GET /model/info` returns basic metadata about the deployed model and the features it expects.
+- `POST /predict` accepts a single employee record and returns a prediction, the associated probability, and a human readable label.
+- `POST /predict/batch` accepts a list of employees and returns predictions for each one in a single call.
 
 **Example request:**
 ```json

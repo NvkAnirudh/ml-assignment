@@ -72,9 +72,9 @@ Five classification models were trained and evaluated:
 
 ## Key Findings
 
-1. **Top predictors:** `has_dependents`, `employment_type`, `salary`, `age`
-2. **Useless features:** `gender`, `region`, `marital_status`, `tenure_years`
-3. **Tree models achieve perfect accuracy** due to deterministic patterns in synthetic data
+1. **Top predictors:** `has_dependents`, `employment_type`, `salary`, `age`.
+2. **Useless features:** `gender`, `region`, `marital_status`, `tenure_years`.
+3. **Tree models achieve perfect accuracy** because there are deterministic patterns in the synthetic data.
 
 ## Usage
 
