@@ -39,16 +39,56 @@ Slight class imbalance, but manageable without aggressive resampling.
 
 ## 3. Model Choices & Rationale
 
-<!-- TODO: Document model selection reasoning -->
+| Model | Why Included |
+|-------|--------------|
+| **Logistic Regression** | Interpretable baseline; shows feature coefficients |
+| **Decision Tree** | Simple, explainable; captures non-linear thresholds |
+| **Random Forest** | Robust ensemble (bagging); reduces variance |
+| **XGBoost** | Boosting ensemble; often best for tabular data |
+| **SVM** | Margin-based approach; different algorithm family |
 
-## 3. Evaluation Results
+All models used `class_weight='balanced'` to handle the mild 62:38 class imbalance.
 
-<!-- TODO: Add performance metrics and comparisons -->
+## 4. Evaluation Results
 
-## 4. Key Takeaways
+| Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|-------|----------|-----------|--------|----|---------|
+| Decision Tree | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Random Forest | 1.000 | 0.999 | 1.000 | 1.000 | 1.000 |
+| XGBoost | 1.000 | 0.999 | 1.000 | 1.000 | 1.000 |
+| SVM | 0.969 | 0.986 | 0.964 | 0.975 | 0.997 |
+| Logistic Regression | 0.894 | 0.935 | 0.891 | 0.912 | 0.971 |
 
-<!-- TODO: Summarize main findings -->
+**Why perfect scores?** The synthetic data contains deterministic rules:
+- Part-time/Contract + No dependents → 0% enrollment (1,179 employees, none enrolled)
+- Full-time + Dependents → 92.8% enrollment
 
-## 5. Next Steps
+Tree models recover these rules exactly. This is not overfitting — train/test gap is 0.000.
 
-<!-- TODO: What would be done with more time -->
+**Feature Importance (Random Forest):**
+
+| Feature | Importance |
+|---------|------------|
+| has_dependents | 31.5% |
+| employment_type_Full-time | 27.2% |
+| salary | 22.7% |
+| age | 18.3% |
+| Others | ~0% |
+
+Four features drive nearly 100% of predictions. Gender, marital status, region, and tenure have no predictive value.
+
+## 5. Key Takeaways
+
+1. **Dependents + Employment type are the primary drivers** — employees with dependents in full-time roles almost always enroll
+2. **Tree-based models achieve perfect accuracy** — the data has clear, learnable decision boundaries
+3. **Logistic Regression underperforms** — can't capture the non-linear threshold effects (age plateau at 30, salary jump at 60k)
+4. **Some features are useless** — gender, region, marital status, tenure add no predictive value
+
+## 6. Next Steps
+
+With more time:
+- **Hyperparameter tuning** — GridSearchCV/RandomizedSearchCV for optimal parameters
+- **Model explainability** — SHAP values for individual prediction explanations
+- **Real-world validation** — test on actual (non-synthetic) data with more noise
+- **API deployment** — FastAPI endpoint for real-time predictions
+- **Monitoring** — track model drift and prediction distributions over time
