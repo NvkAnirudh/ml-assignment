@@ -25,12 +25,19 @@ python src/main.py
 ml-assignment/
 ├── data/
 │   └── employee_data.csv       # Input dataset (10,000 rows)
+├── models/
+│   ├── best_model.pkl          # Trained model (Random Forest)
+│   └── preprocessor.pkl        # Fitted preprocessor
 ├── notebooks/
 │   └── eda.ipynb               # Exploratory data analysis
 ├── src/
 │   ├── data_processing.py      # Data loading and preprocessing
 │   ├── model.py                # Model training and evaluation
+│   ├── tuning.py               # Hyperparameter tuning
+│   ├── experiment.py           # MLflow experiment tracking
+│   ├── api.py                  # FastAPI REST endpoints
 │   └── main.py                 # Main entry point
+├── mlruns/                     # MLflow experiment logs
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # This file
 └── report.md                   # Detailed analysis report
@@ -83,11 +90,29 @@ python src/data_processing.py
 
 # Model training only
 python src/model.py
+
+# Hyperparameter tuning
+python src/tuning.py
+
+# MLflow experiment tracking
+python src/experiment.py
 ```
 
 **Explore data interactively:**
 ```bash
 jupyter notebook notebooks/eda.ipynb
+```
+
+**Run REST API:**
+```bash
+uvicorn src.api:app --reload
+# Visit http://localhost:8000/docs for Swagger UI
+```
+
+**View MLflow experiments:**
+```bash
+mlflow ui
+# Visit http://localhost:5000
 ```
 
 ## Requirements

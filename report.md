@@ -86,9 +86,92 @@ Four features drive nearly 100% of predictions. Gender, marital status, region, 
 
 ## 6. Next Steps
 
-With more time:
-- **Hyperparameter tuning** — GridSearchCV/RandomizedSearchCV for optimal parameters
 - **Model explainability** — SHAP values for individual prediction explanations
 - **Real-world validation** — test on actual (non-synthetic) data with more noise
-- **API deployment** — FastAPI endpoint for real-time predictions
 - **Monitoring** — track model drift and prediction distributions over time
+
+---
+
+# Bonus Work
+
+## 7. Hyperparameter Tuning
+
+Used `RandomizedSearchCV` with 5-fold stratified CV to find optimal parameters.
+
+**Best Parameters Found:**
+
+| Model | Best Params | CV F1 |
+|-------|-------------|-------|
+| Random Forest | `n_estimators=300, max_depth=5, min_samples_split=5, min_samples_leaf=2` | 0.9999 |
+| XGBoost | `n_estimators=100, max_depth=7, learning_rate=0.05, subsample=0.8` | 0.9997 |
+| SVM | `C=100, kernel=rbf, gamma=scale` | 0.9760 |
+
+**Tuned Model Performance (Test Set):**
+
+| Model | Accuracy | F1 | ROC-AUC |
+|-------|----------|-----|---------|
+| Random Forest | 0.9995 | 0.9996 | 1.0000 |
+| XGBoost | 0.9995 | 0.9996 | 1.0000 |
+| SVM | 0.9855 | 0.9883 | 0.9988 |
+
+**Observation:** Tuning improved SVM significantly (F1: 0.975 → 0.988). Tree models were already near-perfect.
+
+## 8. Experiment Tracking (MLflow)
+
+Used MLflow to log experiments for reproducibility and comparison.
+
+**What's tracked:**
+
+| Item | Description |
+|------|-------------|
+| Parameters | All model hyperparameters |
+| Metrics | accuracy, precision, recall, f1, roc_auc |
+| Artifacts | Confusion matrix plots, ROC curves, trained models |
+| Models | Serialized sklearn models for deployment |
+
+**Saved artifacts:**
+- `models/best_model.pkl` — Best performing model (Random Forest)
+- `models/preprocessor.pkl` — Fitted preprocessor for inference
+- `mlruns/` — MLflow experiment logs
+
+**View experiments:** Run `mlflow ui` in project directory to launch dashboard.
+
+## 9. REST API (FastAPI)
+
+Built a REST API for real-time predictions.
+
+**Endpoints:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Health check |
+| `/model/info` | GET | Model metadata |
+| `/predict` | POST | Single prediction |
+| `/predict/batch` | POST | Batch predictions |
+
+**Example request:**
+```json
+{
+  "age": 45,
+  "gender": "Male",
+  "marital_status": "Married",
+  "salary": 75000,
+  "employment_type": "Full-time",
+  "region": "West",
+  "has_dependents": "Yes",
+  "tenure_years": 5.0
+}
+```
+
+**Example response:**
+```json
+{
+  "prediction": 1,
+  "probability": 0.9388,
+  "label": "Enrolled"
+}
+```
+
+**Run API:** `uvicorn src.api:app --reload`
+
+**Docs:** Visit `http://localhost:8000/docs` for interactive Swagger UI.
